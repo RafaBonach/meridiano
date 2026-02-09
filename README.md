@@ -70,6 +70,7 @@ Built for the curious mind wanting depth and relevance without the endless time 
 **Prerequisites**:
 
 * Python 3.10 or later
+* uv
 * Git (optional, for cloning)
 * API Keys:
   * Deepseek API Key (or your chosen LLM provider)
@@ -101,7 +102,8 @@ Built for the curious mind wanting depth and relevance without the endless time 
     ```
 
 4. **Configure API Keys:**
-    * Copy `.env.example` into a file named `.env` in the project root.
+    * Create a file named `.env`
+    * Copy `.env.example` into the file `.env` in the project root.
     * Add your API keys (more instructions in the example file):
 
         ```dotenv
