@@ -7,9 +7,14 @@ authors = [{ name = "Lucas Zawacki", email = "lfzawacki@gmail.com" }]
 requires-python = ">=3.13"
 dependencies = [
     "beautifulsoup4>=4.14.3",
+    "faiss-cpu>=1.13.2",
     "feedparser>=6.0.12",
     "flask>=3.1.2",
+    "groq>=0.37.1",
     "gunicorn>=23.0.0",
+    "langchain>=1.2.10",
+    "langchain-community>=0.4.1",
+    "langchain-groq>=1.1.2",
     "litellm>=1.80.9",
     "lxml>=6.0.2",
     "lxml-html-clean>=0.4.3",
@@ -22,6 +27,7 @@ dependencies = [
     "requests>=2.32.5",
     "schedule>=1.2.2",
     "scikit-learn>=1.8.0",
+    "sentence-transformers>=5.2.2",
     "sqlmodel>=0.0.27",
     "streamlit>=1.54.0",
     "trafilatura>=2.0.0",
