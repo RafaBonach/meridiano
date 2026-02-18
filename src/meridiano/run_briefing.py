@@ -181,7 +181,10 @@ def scrape_articles(feed_profile, rss_feeds):  # Added params
 
     print(f"--- Scraping Finished [{feed_profile}]. Added {new_articles_count} new articles. ---")
 
-
+"""
+    Preciso modificar o process_articles para ele fazer a verificação se a notícia é falsa ou não.
+    Na hora de processar a notícia, a LLM deve verificar se a notícia se enquadra em Verdadeira, Parcialmente verdadeira, Falsa ou Indeterminado(Ex.: Receita de bolo)
+"""
 def process_articles(feed_profile, effective_config, limit=1000):
     """Processes unprocessed articles: summarizes and generates embeddings."""
     print("\n--- Starting Article Processing ---")
