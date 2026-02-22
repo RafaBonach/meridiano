@@ -20,6 +20,8 @@ from meridiano import database
 from meridiano.models import Article, get_session
 from meridiano.utils import fetch_article_content_and_og_image
 
+from meridiano.utils import agrupate_context_and_prompt
+
 # --- Setup ---
 load_dotenv()
 
@@ -184,6 +186,10 @@ def scrape_articles(feed_profile, rss_feeds):  # Added params
 """
     Preciso modificar o process_articles para ele fazer a verificação se a notícia é falsa ou não.
     Na hora de processar a notícia, a LLM deve verificar se a notícia se enquadra em Verdadeira, Parcialmente verdadeira, Falsa ou Indeterminado(Ex.: Receita de bolo)
+    Tarefas:
+    - Modificar o prompt de resumo para incluir a análise de veracidade.
+    - Modificar o call_deepseek_chat para transforma-lo em um RAG.
+    - Criar uma base de dados de treinamento para o rag.
 """
 def process_articles(feed_profile, effective_config, limit=1000):
     """Processes unprocessed articles: summarizes and generates embeddings."""
@@ -191,6 +197,10 @@ def process_articles(feed_profile, effective_config, limit=1000):
     chat_model = getattr(effective_config, "LLM_CHAT_MODEL", "deepseek/deepseek-chat")
     summary_prompt_template = getattr(effective_config, "PROMPT_ARTICLE_SUMMARY", config.PROMPT_ARTICLE_SUMMARY)
 
+    # If exists an external context, we can use it to enhance the prompt.
+    agrupate_context_and_prompt(summary_prompt_template)
+    print(summary_prompt_template)
+        
     unprocessed = database.get_unprocessed_articles(feed_profile, limit)
     processed_count = 0
     if not unprocessed:
