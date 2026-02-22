@@ -34,6 +34,8 @@ RSS_FEEDS = [
 
 pt_br = " Responda em português brasileiro."
 
+data_context = "Answer based on this context: {database_context}.\n\n"
+
 # Used in process_articles (operates globally, so uses default)
 PROMPT_ARTICLE_SUMMARY = (
     "Resuma os pontos principais desta notícia destacando os aspectos que podem indicar a presença de informação falsa ou enganosa, como recorte tendencioso, ausência de contraponto, reprodução de falas desinformativas sem apresentação de especialistas ou vozes dissonantes, uso de adjetivações fortes sem indicação de que se trata de opinião, ou linguagem chula e ataques diretos em artigos de opinião."
