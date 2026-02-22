@@ -154,31 +154,11 @@ def scrape_single_article_details(article_url):
 
     return {"title": fetched_title, "raw_content": raw_content, "image_url": final_image_url, "error": error_message}
 
-def agrupate_context_and_prompt(prompt, context="rag_training_data.json"):
-    """
-    Essa função deve pegar o prompt, e concatenar com a base de dados de contexto (json)
-    O arquivo json deve ser convertido em texto e inserido no prompt onde tiver {database_context}
-    Deve ser feito algo similar a isso:
-    ```
-        data = [
-            {
-                "Veracidade": "Falsa",
-                "Link": "https://www.gazetadopovo.com.br/vida-e-cidadania/ministros-do-stf-passam-a-personificar-democracia-apos-decisoes-abusivas/"
-            },
-            {
-                "Veracidade": "Verdadeira",
-                "Link": "https://www.correiobraziliense.com.br/politica/2022/08/5026493-bolsonaro-ataca-stf-e-desqualifica-carta-em-defesa-da-democracia.html"
-            }
-        ]
-
-        contexto = "\n".join(
-            f"Link: {item['Link']}\nVeracidade: {item['Veracidade']}\n"
-            for item in data
-        )
-    ```
-    """
+def agrupate_context_and_prompt(prompt: str, context="/home/rafael/Projetos/meridiano/src/meridiano/rag_training_data.json"):
     if "{database_context}" not in prompt:
         return prompt
+    
+    
     elif "{database_context}" in prompt and not os.path.exists(context):
         prompt = prompt.replace("{database_context}", "Don't have any context available. Disconsider this information.")
         print("Skipping context aggregation for prompt: 'rag_training_data.json' not found.")
@@ -187,6 +167,11 @@ def agrupate_context_and_prompt(prompt, context="rag_training_data.json"):
     with open(context,"r") as f:
         data = json.load(f)
 
-    context = ""
+    context = "\n\n".join(
+        f"topico: {item['topico']}\nexplicação: {item['explicação']}\ndesinformativo: {item['desinformativo']}\ninformativo: {item['informativo']}\n" for item in data
+    )
+
+    prompt = prompt.replace("{database_context}", context)
     
+    return prompt
     
