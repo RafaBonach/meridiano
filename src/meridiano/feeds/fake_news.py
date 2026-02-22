@@ -1,5 +1,10 @@
 RSS_FEEDS = [
     "https://feeds.folha.uol.com.br/poder/rss091.xml",  # Folha de S.Paulo - Poder
+    "https://rss.app/feeds/LeBls41h3T952Ds5.xml" # Gazeta do Povo - Política
+]
+"""
+RSS_FEEDS = [
+    "https://feeds.folha.uol.com.br/poder/rss091.xml",  # Folha de S.Paulo - Poder
     "https://feeds.folha.uol.com.br/ciencia/rss091.xml",  # Folha de S.Paulo - Ciência
     "https://feeds.folha.uol.com.br/opiniao/rss091.xml",  # Folha de S.Paulo - Opinião
     "https://feeds.folha.uol.com.br/educacao/rss091.xml",  # Folha de S.Paulo - Educação
@@ -30,16 +35,18 @@ RSS_FEEDS = [
     "http://agenciabrasil.ebc.com.br/rss/educacao/feed.xml", # Agência Brasil - Educação
     "http://agenciabrasil.ebc.com.br/rss/saude/feed.xml", # Agência Brasil - Saúde
 ]
-
+"""
+data_context = "Responda baseado neste contexto: {database_context}.\n\n"
 
 pt_br = " Responda em português brasileiro."
 
-data_context = "Answer based on this context: {database_context}.\n\n"
-
 # Used in process_articles (operates globally, so uses default)
 PROMPT_ARTICLE_SUMMARY = (
-    "Resuma os pontos principais desta notícia destacando os aspectos que podem indicar a presença de informação falsa ou enganosa, como recorte tendencioso, ausência de contraponto, reprodução de falas desinformativas sem apresentação de especialistas ou vozes dissonantes, uso de adjetivações fortes sem indicação de que se trata de opinião, ou linguagem chula e ataques diretos em artigos de opinião."
-    "Elabore esse resumo em 2 a 4 frases"
+    data_context +
+    "Analise o conteúdo desta notícia e verifique se ela se categoriza em uma notícia verdadeira, falsa ou não se enquadra."
+    "Durante essa analise, deve ser identificada as principais caracteristicas que enquandrem-as nos tópicos anteriores."
+    "Após a analise e classificação, elabre uma descrião de 2 a 6 frases explicando o motivo da classificação, destacando os aspectos que podem indicar a presença de informação falsa ou enganosa, como recorte tendencioso, ausência de contraponto, reprodução de falas desinformativas sem apresentação de especialistas ou vozes dissonantes, uso de adjetivações fortes sem indicação de que se trata de opinião, ou linguagem chula e ataques diretos em artigos de opinião."
+    "Caso seja necessário, utilize trechos da notícia para exemplificar os pontos destacados na descrição. Seja claro e objetivo em sua análise, fornecendo uma avaliação crítica e fundamentada do conteúdo da notícia."
     "Identifique os principais tópicos abordados.\n\nArtigo:\n{article_content}." + pt_br
 )
 
