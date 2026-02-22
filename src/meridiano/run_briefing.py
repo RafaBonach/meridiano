@@ -198,7 +198,7 @@ def process_articles(feed_profile, effective_config, limit=1000):
     summary_prompt_template = getattr(effective_config, "PROMPT_ARTICLE_SUMMARY", config.PROMPT_ARTICLE_SUMMARY)
 
     # If exists an external context, we can use it to enhance the prompt.
-    agrupate_context_and_prompt(summary_prompt_template)
+    summary_prompt_template = agrupate_context_and_prompt(summary_prompt_template)
     print(summary_prompt_template)
         
     unprocessed = database.get_unprocessed_articles(feed_profile, limit)
