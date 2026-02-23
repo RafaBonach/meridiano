@@ -40,6 +40,9 @@ data_context = "Responda baseado neste contexto: {database_context}.\n\n"
 
 pt_br = " Responda em português brasileiro."
 
+"""
+    Preciso solicitar que a IA insira a classificação da notícia como Verdadeira, Parcialmente verdadeira, Falsa ou Indeterminado(Ex.: Receita de bolo) no prompt de resumo.
+"""
 # Used in process_articles (operates globally, so uses default)
 PROMPT_ARTICLE_SUMMARY = (
     data_context +
@@ -50,6 +53,9 @@ PROMPT_ARTICLE_SUMMARY = (
     "Identifique os principais tópicos abordados.\n\nArtigo:\n{article_content}." + pt_br
 )
 
+"""
+    Modificar o sistema de classificação, a IA deve classificar apenas em 1 - Verdadeira, 2 - Parcialmente verdadeira, 3 - Falsa ou 4 - Indeterminado (Ex.: Receita de bolo).
+"""
 # Used in rate_articles (operates globally, so uses default)
 PROMPT_IMPACT_RATING = """Analise o resumo da notícia a seguir e verifique se ela contém informações falsas ou enganosas.
 Considere fatores como recorte tendencioso e sem apresentação de qualquer forma de contraponto. 

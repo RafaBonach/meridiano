@@ -168,7 +168,7 @@ def agrupate_context_and_prompt(prompt: str, context="/home/rafael/Projetos/meri
         data = json.load(f)
 
     context = "\n\n".join(
-        f"topico: {item['topico']}\nexplicação: {item['explicação']}\ndesinformativo: {item['desinformativo']}\ninformativo: {item['informativo']}\n" for item in data
+        f"topico: {item['topico']}\n\nexplicação: {item['explicação']}\n\ndesinformativo: {item['desinformativo']}\n\ninformativo: {item['informativo']}\n" for item in data
     )
 
     prompt = prompt.replace("{database_context}", context)

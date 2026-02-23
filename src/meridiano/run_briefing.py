@@ -183,14 +183,7 @@ def scrape_articles(feed_profile, rss_feeds):  # Added params
 
     print(f"--- Scraping Finished [{feed_profile}]. Added {new_articles_count} new articles. ---")
 
-"""
-    Preciso modificar o process_articles para ele fazer a verificação se a notícia é falsa ou não.
-    Na hora de processar a notícia, a LLM deve verificar se a notícia se enquadra em Verdadeira, Parcialmente verdadeira, Falsa ou Indeterminado(Ex.: Receita de bolo)
-    Tarefas:
-    - Modificar o prompt de resumo para incluir a análise de veracidade.
-    - Modificar o call_deepseek_chat para transforma-lo em um RAG.
-    - Criar uma base de dados de treinamento para o rag.
-"""
+
 def process_articles(feed_profile, effective_config, limit=1000):
     """Processes unprocessed articles: summarizes and generates embeddings."""
     print("\n--- Starting Article Processing ---")
@@ -240,7 +233,10 @@ def process_articles(feed_profile, effective_config, limit=1000):
 
     print(f"--- Processing Finished. Processed {processed_count} articles. ---")
 
-
+"""
+    - Modificar o sistema de classificação das notícias
+        - As noticias deverão receber uma classificação de 1 - Verdadeira, 2 - Parcialmente verdadeira, 3 - Falsa ou 4 - Indeterminado
+"""
 def rate_articles(feed_profile, effective_config, limit=1000):
     """Rates the impact of processed articles using an LLM."""
     print("\n--- Starting Article Impact Rating ---")
