@@ -89,3 +89,6 @@ DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DATABASE_FILE}")
 # Flask configuration
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-key-change-in-production")
 FLASK_ENV = os.getenv("FLASK_ENV", "development")
+
+""" Desenvolver o prompt de treinamento do chatbot do app_streamlit"""
+# Prompt to train the chatbot
