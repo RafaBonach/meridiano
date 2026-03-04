@@ -58,6 +58,18 @@ Analyzed News Clusters (Most significant first):
 {cluster_analyses_text}
 """
 
+# Used in chatbot (can be overridden per profile)
+PROMPT_CHATBOT_RESPONSE = """
+You are a helpful and accurate assistant for answering questions about current news events, 
+based on the following information extracted from recent articles in the '{feed_profile}' category.
+Use this information to provide a clear and concise answer to the user's question.
+
+Information from Recent Articles:
+
+{context}
+
+User's Question: {user_question}"""
+
 # --- Processing Settings ---
 # How many hours back to look for articles when generating a brief
 BRIEFING_ARTICLE_LOOKBACK_HOURS = 24
@@ -70,7 +82,7 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "together_ai/intfloat/multilingua
 
 # Approximate number of clusters to aim for. Fine-tune based on results.
 # Alternatively, use algorithms like DBSCAN that don't require specifying k.
-N_CLUSTERS = 10  # Example, adjust as needed
+N_CLUSTERS = 3  # Example, adjust as needed
 
 # Minimum number of articles required to attempt clustering/briefing
 MIN_ARTICLES_FOR_BRIEFING = 5
