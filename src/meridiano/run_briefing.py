@@ -437,6 +437,51 @@ def generate_brief(feed_profile, effective_config):
     else:
         print(f"--- Brief Generation Failed [{feed_profile}]: Could not synthesize final brief. ---")
 
+# --- Execução externa ---
+def extern_execution(args: argparse.Namespace, feed_profile_name: str, effective_config: object):
+    
+    # Default to running all if no specific stage OR --all is provided
+    should_run_all = args.run_all or not (args.scrape or args.process or args.generate or args.rate)
+
+    print(f"\nMeridian Briefing Run [{feed_profile_name}] - {datetime.now()}")
+    print("Initializing database...")
+    database.init_db()  # Initialize DB regardless of stage run
+
+    current_rss_feeds = getattr(effective_config, "RSS_FEEDS", None)
+
+    if should_run_all:
+        print("\n>>> Running ALL stages <<<")
+        if current_rss_feeds:
+            scrape_articles(feed_profile_name, current_rss_feeds)
+        else:
+            print("Skipping scrape stage: No RSS_FEEDS found for profile.")
+        process_articles(feed_profile_name, effective_config, limit=args.limit)
+        rate_articles(feed_profile_name, effective_config, limit=args.limit)
+        if current_rss_feeds:
+            generate_brief(feed_profile_name, effective_config)
+        else:
+            print("Skipping generate stage: No RSS_FEEDS found for profile.")
+    else:
+        if args.scrape:
+            if current_rss_feeds:
+                print(f"\n>>> Running ONLY Scrape Articles stage [{feed_profile_name}] <<<")
+                scrape_articles(feed_profile_name, current_rss_feeds)
+            else:
+                print(f"Cannot run scrape stage: No RSS_FEEDS found for profile '{feed_profile_name}'.")
+        if args.process:
+            print("\n>>> Running ONLY Process Articles stage <<<")
+            process_articles(feed_profile_name, effective_config, limit=args.limit)
+        if args.rate:
+            print("\n>>> Running ONLY Rate Articles stage <<<")
+            rate_articles(feed_profile_name, effective_config, limit=args.limit)
+        if args.generate:
+            if current_rss_feeds:  # Check if feeds exist, as brief relies on articles from them
+                print(f"\n>>> Running ONLY Generate Brief stage [{feed_profile_name}] <<<")
+                generate_brief(feed_profile_name, effective_config)
+            else:
+                print(f"Cannot run generate stage: No RSS_FEEDS found for profile '{feed_profile_name}'.")
+
+    print(f"\nRun Finished [{feed_profile_name}] - {datetime.now()}")
 
 # --- Main Execution ---
 def main():
