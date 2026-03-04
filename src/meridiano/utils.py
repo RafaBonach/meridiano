@@ -1,3 +1,5 @@
+import argparse
+import importlib
 import logging
 import os
 import json
@@ -7,6 +9,8 @@ from urllib.parse import urljoin
 import requests
 import trafilatura
 from bs4 import BeautifulSoup
+
+from meridiano import config_base as config
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
@@ -174,4 +178,93 @@ def agrupate_context_and_prompt(prompt: str, context="/home/rafael/Projetos/meri
     prompt = prompt.replace("{database_context}", context)
     
     return prompt
-    
+
+
+def str_to_parser(
+    feed: str,
+    scrape: bool,
+    process: bool,
+    generate: bool,
+    rate: bool,
+    run_all: bool = False,
+    model: str | None = None,
+    limit: int = 1000,
+):
+    """
+    Returns a tuple of (args, feed_profile_name, effective_config) based on the provided parameters and configuration files.
+
+    :param feed: The feed profile name to use (e.g. "Brasil").
+    :param scrape: True if the scraping stage should be executed
+    :param process: True if the processing stage should be executed
+    :param generate: True if the briefing generation stage should be executed
+    :param rate: True if the rating stage should be executed
+    :param run_all: True if all stages should be executed (overrides individual stage flags)
+    :param model: Optional model name to override the default LLM chat model
+    :param limit: Optional limit for number of articles to process/scrape
+
+    :return: A tuple of (args, feed_profile_name, effective_config)
+    """
+    feed_profile_name = feed or config.DEFAULT_FEED_PROFILE
+
+    args = argparse.Namespace(
+        feed=feed_profile_name,
+        scrape=bool(scrape),
+        process=bool(process),
+        generate=bool(generate),
+        rate=bool(rate),
+        run_all=bool(run_all),
+        model=model,
+        limit=int(limit),
+    )
+
+    feed_config = None
+    rss_feeds = None
+
+    try:
+        feed_module_name = f".feeds.{feed_profile_name}"
+        feed_config = importlib.import_module(feed_module_name, package="meridiano")
+    except ImportError:
+        try:
+            feed_module_name = f"feeds.{feed_profile_name}"
+            feed_config = importlib.import_module(feed_module_name)
+        except ImportError as exc:
+            raise ValueError(
+                f"Não foi possível importar a configuração do feed '{feed_profile_name}'. "
+                f"Verifique se o arquivo 'src/meridiano/feeds/{feed_profile_name}.py' existe."
+            ) from exc
+
+    if feed_config:
+        rss_feeds = getattr(feed_config, "RSS_FEEDS", [])
+
+    effective_config_dict = {k: v for k, v in config.__dict__.items() if not k.startswith("__")}
+    if feed_config:
+        for key, value in feed_config.__dict__.items():
+            if not key.startswith("__"):
+                effective_config_dict[key] = value
+
+    class EffectiveConfig:
+        def __init__(self, dictionary):
+            for key, value in dictionary.items():
+                setattr(self, key, value)
+
+    effective_config = EffectiveConfig(effective_config_dict)
+
+    if rss_feeds is not None:
+        effective_config.RSS_FEEDS = rss_feeds
+
+    if args.model:
+        if args.model.startswith("ollama:") and "/" not in args.model:
+            args.model = args.model.replace("ollama:", "ollama/", 1)
+
+        effective_config.LLM_CHAT_MODEL = args.model
+
+    return args, feed_profile_name, effective_config
+
+
+""" --- Minhas adições --- """
+""" Criador de database """
+def cria_arquivo_veracidade(artigos: dict) -> None:
+    with open("veracidade_discrepancias.csv", "w") as f:
+        f.write("id,veracidade_final,veracidade_llm,veracidade_kmeans,url,conteudo\n")
+        for id, article in artigos.items():
+            f.write(f"{id},{article['veracidade']},{article['veracidade_llm']},{article['veracidade_kmeans']},{article['url']},\"{article['raw_content'].replace('\"', '\"\"')}...\"\n")
