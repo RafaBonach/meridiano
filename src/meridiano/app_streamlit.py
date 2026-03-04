@@ -16,28 +16,55 @@ from datetime import date, datetime, timedelta
 import os
 import markdown
 import streamlit as st
-from sqlmodel import select
+from dotenv import load_dotenv
 
 from meridiano import config_base as config
 from meridiano import database
-from meridiano.utils import format_datetime, scrape_single_article_details
+from meridiano.utils import format_datetime, scrape_single_article_details, str_to_parser
 
-def index():
-    """Index page content."""
+from meridiano.presentation_streamlit import articles
 
+# --- Setup ---
+load_dotenv()
+
+"""
+Desenvolver a pagina de scraping, onde o usuário poderá inserir uma URL e o sistema irá realizar o processo de scraping
+
+"""
 
 def main():
     """Main Streamlit application."""
-    st.title("Meridiano - Monitoramento de Desinformação")
-    st.markdown(
-        """
-        Bem-vindo ao Meridiano, um sistema de monitoramento de desinformação que utiliza inteligência artificial para analisar e classificar notícias. 
-        Este projeto é uma iniciativa acadêmica e tem como objetivo fornecer insights sobre a qualidade da informação disponível na internet, ajudando a identificar notícias falsas e enganosas.
-        """
-    )
+    database.init_db()  # Ensure the database is initialized when the app starts
+    arg, feed_profile_name, effective_config = str_to_parser(feed="fake_news", scrape=False, process=False, generate=False, rate=False)
+
+    st.session_state.arg = arg
+    st.session_state.feed_profile_name = feed_profile_name
+    st.session_state.effective_config = effective_config
+
+    st.set_page_config(page_title="Campus Multiplataforma", page_icon="📰", layout="wide")
+    st.title("📰 Campus Multiplataforma - Monitoramento de Desinformação")
+    
+    with st.sidebar:
+        st.header("Modulos")
+        mode = st.radio("Selecione o módulo:", ("Chatbot", "Artigos"))
+
+        st.divider()
+        
+        st.subheader("Configurações")
+    
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    if mode == "Chatbot":
+        if database.get_total_article_count() == 0:
+            st.write("Nenhum artigo encontrado na base de dados. Por favor, adicione artigos para que o chatbot possa utilizá-los como base de conhecimento.")
+        else:
+            st.write("Módulo de Chatbot em desenvolvimento. Em breve, você poderá interagir com nosso assistente de IA para obter análises e insights sobre as notícias processadas.")
+    elif mode == "Artigos":
+        articles.show()
     
 
 
+
 if __name__ == "__main__":
-    database.init_db()
     main()
