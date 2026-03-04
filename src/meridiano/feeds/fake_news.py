@@ -41,33 +41,36 @@ data_context = "Responda baseado neste contexto:\n {database_context}.\n\n"
 pt_br = " Responda em português brasileiro."
 
 # Used in process_articles (operates globally, so uses default)
+""" A ideia aqui é pegar uma notícia e transformá-la em uma manchete.
+    Essa manchete deve apresentar todos os pontos principais da notícia."""
 PROMPT_ARTICLE_SUMMARY = (
-    data_context +
-    "Analise o conteúdo desta notícia e verifique se ela se categoriza em uma notícia Verdadeira, Parcialmente verdadeira, Falsa ou Indeterminado (receita de bolo, instrução, entre outros artigos que não são notícias)."
-    "Durante essa analise, deve ser identificada as principais caracteristicas que enquandrem-as nos tópicos anteriores."
-    "Apresente claramente se a notícia é Verdadeira, Parcialmente verdadeira, Falsa ou Indeterminado e"
-    "elabre uma descrião de 2 a 6 frases explicando o motivo da classificação, destacando os aspectos que podem indicar a presença de informação falsa ou enganosa, como recorte tendencioso, ausência de contraponto, reprodução de falas desinformativas sem apresentação de especialistas ou vozes dissonantes, uso de adjetivações fortes sem indicação de que se trata de opinião, ou linguagem chula e ataques diretos em artigos de opinião."
-    "Caso seja necessário, utilize trechos da notícia para exemplificar os pontos destacados na descrição. Seja claro e objetivo em sua análise, fornecendo uma avaliação crítica e fundamentada do conteúdo da notícia."
-    "Finalmente, identifique e indique os principais tópicos abordados.\n\nArtigo:\n{article_content}." + pt_br
+    "Analise o artigo a seguir e resuma o conteúdo em uma manchete clara e concisa, que capture os pontos principais e o tom do artigo. "
+    "A manchete deve ser neutra, apresentando exclusivamente o que é aprentado no artigo, sem fazer juizo de valores ou adicionar informações externas."
+    "\n\nArtigo:\n{article_content}." + pt_br
 )
 
 
 # Used in rate_articles (operates globally, so uses default)
-PROMPT_IMPACT_RATING = """Analise o descrição da notícia a seguir e estime o quão enganosa ela é.
-Verifique fatores como a presença de informações falsas ou enganosas, recorte tendencioso, ausência de contraponto, reprodução de falas desinformativas sem apresentação de especialistas ou vozes dissonantes, uso de adjetivações fortes sem indicação de que se trata de opinião, 
-ou linguagem chula e ataques diretos em artigos de opinião. Seja extremamente crítico e conservador ao atribuir pontuações — pontuações mais altas devem refletir notícias verdadeiramente enganosas ou com forte potencial de desinformação.
+PROMPT_IMPACT_RATING = """Analise a manchete a seguir e avalie o grau de veracidade da notícia.
 
-Avalie o grau de veracidade em uma escala de 1 a 4, usando estas diretrizes:
+Considere aspectos importantes como presença de palavras de alto impacto que visem chamar a atenção de um publico específico, 
+uso de adjetivações fortes, linguagem sensacionalista, ou elementos que visam gerar indignação ou medo, sem apresentar evidências claras ou contrapontos.
 
-1: Verdadeira. A descrição da notícia indica que a notícia é verdadeira, baseada em evidências claras e verificáveis, sem sinais de desinformação ou engano.
-2: Parcialmente verdadeira. A descrição da notícia sugere que a notícia contém elementos de verdade, mas também apresenta informações enganosas ou imprecisas. Pode haver uma mistura de fatos e desinformação, ou a notícia pode ser tendenciosa, mas não completamente falsa.
-3: Falsa. A descrição da notícia indica que a notícia é notadamente falsa, com evidências claras de desinformação, engano ou falta de veracidade. A notícia pode conter informações fabricadas, distorcidas ou completamente infundadas com intuito de desinformar o leitor.
-4: Indeterminado. Não se trata de uma notícia, mas sim de um conteúdo que não pode ser classificado como verdadeiro ou falso, como uma receita de bolo, instrução ou outro tipo de artigo que não tem a intenção de informar sobre um evento ou fato específico. 
+Avalie o grau de veracidade em uma escala de 0 a 2, usando estas diretrizes:
 
-Resumo:
+0: Verdadeira - A manchete é precisa, confiável e baseada em fatos verificáveis. Não apresenta carater sensacionalista, adjetivações fortes ou elementos que visam engajar o leitor de forma tendenciosa. Tem baixo potencial de desinformação. 
+Exemplo: "O Brasil tem mais de 16 mil sindicatos. E, aliás, uma outra coisa estranha. Dos 16 mil, 11,5 mil mais ou menos são sindicatos de trabalhadores. E mais de 5.000 patronais".
+
+1: Falsa - A manchete adota de palavras de alto impacto, adjetivações fortes, ou linguagem sensacionalista que visa gerar engajamento, indignação ou medo, mas carece de evidências claras ou contrapontos. Tem potencial moderado a alto de desinformação. 
+Exemplo: "Não existe nenhum lugar do mundo que tenha aplicado essa medida teto de gastos"
+
+2: Indeterminada - Não se trata de uma manchete que deve ser verificada a veracidade, é o caso de receita de bolo, instrução, ou outro tipo de artigo que não tem a função de informar sobre um evento ou fato específico. 
+Exemplo: "6 maneiras de reinventar a ida ao cinema em São Paulo" ou "Como escolher a impressora ideal gastando pouco? Confira dicas e modelos"
+
+Manchete:
 "{summary}"
 
-Digite SOMENTE o número inteiro que representa sua classificação (1 a 4).
+Digite SOMENTE o número inteiro que representa sua classificação (0 a 2).
 """
 
 PROMPT_CLUSTER_ANALYSIS = (
@@ -93,3 +96,21 @@ Se não houver evidências suficientes para classificar a notícia como falsa, e
 Grupo de notícias analisadas:
 {cluster_analyses_text}
 """
+
+# Used in chatbot (can be overridden per profile)
+PROMPT_CHATBOT_RESPONSE = ("""
+Você é um assistente de IA especializado em identificar e explicar notícias falsas, 
+comparando as informações fornecidas nas fontes a seguir com evidências confiáveis para determinar a veracidade das alegações.
+
+Responda se a pergunta do usuário é verdadeira ou falsa baseada no contexto fornecido, 
+e explique o motivo da classificação, indicando a fonte ao qual você se baseou e o método que adotou
+para chegar a conclusão. 
+Se a pergunta não puder ser respondida com base nas informações fornecidas, explique por que e indique quais informações adicionais seriam necessárias para uma avaliação mais precisa.
+
+<context>
+{context}
+</context>
+
+Pergunta: {user_question}
+                           
+""" + pt_br)
