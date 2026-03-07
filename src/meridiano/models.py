@@ -53,6 +53,11 @@ class Article(SQLModel, table=True):
     image_url: Optional[str] = None
     feed_profile: str = Field(default="default", index=True)
 
+    # --- Coluna fake news ---
+    veracidade: Optional[int] = None
+    veracidade_llm: Optional[int] = None
+    veracidade_kmeans: Optional[int] = None
+
 
 class Brief(SQLModel, table=True):
     """Brief model representing generated news briefs."""
