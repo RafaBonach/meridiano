@@ -97,13 +97,13 @@ def get_deepseek_embedding(text, model=config.EMBEDDING_MODEL):
 # --- Core Functions ---
 
 
-def scrape_articles(feed_profile, rss_feeds):  # Added params
+def scrape_articles(feed_profile, rss_feeds) -> bool:  # Added params
     """Scrapes articles for a specific feed profile."""
     print(f"\n--- Starting Article Scraping [{feed_profile}] ---")
     new_articles_count = 0
     if not rss_feeds:
         print(f"Warning: No RSS_FEEDS defined for profile '{feed_profile}'. Skipping scrape.")
-        return
+        return False
 
     for feed_url in rss_feeds:
         print(f"Fetching feed: {feed_url}")
@@ -182,6 +182,7 @@ def scrape_articles(feed_profile, rss_feeds):  # Added params
             time.sleep(0.5)  # Be polite
 
     print(f"--- Scraping Finished [{feed_profile}]. Added {new_articles_count} new articles. ---")
+    return True
 
 
 def process_articles(feed_profile, effective_config, limit=1000):
@@ -438,8 +439,10 @@ def generate_brief(feed_profile, effective_config):
         print(f"--- Brief Generation Failed [{feed_profile}]: Could not synthesize final brief. ---")
 
 # --- Execução externa ---
-def extern_execution(args: argparse.Namespace, feed_profile_name: str, effective_config: object):
+def extern_execution(args: argparse.Namespace, feed_profile_name: str, effective_config: object) -> bool:
     
+    state = False
+
     # Default to running all if no specific stage OR --all is provided
     should_run_all = args.run_all or not (args.scrape or args.process or args.generate or args.rate)
 
@@ -452,7 +455,7 @@ def extern_execution(args: argparse.Namespace, feed_profile_name: str, effective
     if should_run_all:
         print("\n>>> Running ALL stages <<<")
         if current_rss_feeds:
-            scrape_articles(feed_profile_name, current_rss_feeds)
+            state = scrape_articles(feed_profile_name, current_rss_feeds)
         else:
             print("Skipping scrape stage: No RSS_FEEDS found for profile.")
         process_articles(feed_profile_name, effective_config, limit=args.limit)
@@ -465,7 +468,7 @@ def extern_execution(args: argparse.Namespace, feed_profile_name: str, effective
         if args.scrape:
             if current_rss_feeds:
                 print(f"\n>>> Running ONLY Scrape Articles stage [{feed_profile_name}] <<<")
-                scrape_articles(feed_profile_name, current_rss_feeds)
+                state = scrape_articles(feed_profile_name, current_rss_feeds)
             else:
                 print(f"Cannot run scrape stage: No RSS_FEEDS found for profile '{feed_profile_name}'.")
         if args.process:
@@ -482,6 +485,7 @@ def extern_execution(args: argparse.Namespace, feed_profile_name: str, effective
                 print(f"Cannot run generate stage: No RSS_FEEDS found for profile '{feed_profile_name}'.")
 
     print(f"\nRun Finished [{feed_profile_name}] - {datetime.now()}")
+    return state
 
 # --- Main Execution ---
 def main():
