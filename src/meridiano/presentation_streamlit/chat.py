@@ -1,8 +1,13 @@
 import streamlit as st
 from meridiano.service_streamlit.rag import RAGService
+from meridiano import database
 
 def show():
     st.header("💬 Chatbot")
+
+    if database.get_total_article_count() == 0:
+        st.write("Nenhum artigo encontrado na base de dados. Por favor, adicione artigos para que o chatbot possa utilizá-los como base de conhecimento.")
+        return
 
     if "rag_service" not in st.session_state:
         st.session_state.rag_service = RAGService()
@@ -22,6 +27,7 @@ def show():
                 response = st.session_state.rag_service.ask_question(prompt)
                 st.write(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
+                print(st.session_state.rag_service.qa_chain.get_prompts)
 
     if st.button("🗑 Limpar Conversa"):
         st.session_state.messages = []
