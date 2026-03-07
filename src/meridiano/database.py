@@ -302,7 +302,7 @@ def get_unprocessed_articles(feed_profile: str, limit: int = 50) -> List[Dict[st
         return [_article_to_dict(article) for article in articles]
 
 
-def update_article_processing(article_id: int, processed_content: str, embedding: Optional[List[float]]) -> None:
+def update_article_processing(article_id: int, processed_content: str = "", embedding: Optional[List[float]] = None) -> None:
     """Updates an article with its summary, embedding, and processed timestamp."""
     with get_session() as session:
         statement = select(Article).where(Article.id == article_id)
@@ -405,3 +405,19 @@ def get_distinct_feed_profiles(table: str = "articles") -> List[str]:
             result = session.exec(statement).all()
 
         return list(result)
+
+""" Valores adicionados para analise de fake news """
+def salva_veracidade(article_id: int, feed_profile: str, veracidade_llm: int = None, veracidade_kmeans: int = None, veracidade_final: int = None) -> None:
+    """Salva a veracidade de um artigo no banco de dados."""
+    with get_session() as session:
+        statement = select(Article).where(Article.id == article_id and Article.feed_profile == feed_profile)
+        article = session.exec(statement).first()
+        if article:
+            if veracidade_llm is not None:
+                article.veracidade_llm = veracidade_llm
+            if veracidade_kmeans is not None:
+                article.veracidade_kmeans = veracidade_kmeans
+            if veracidade_final is not None:
+                article.veracidade = veracidade_final
+            session.add(article)
+            session.commit()
