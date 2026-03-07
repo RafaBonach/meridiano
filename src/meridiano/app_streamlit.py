@@ -22,7 +22,7 @@ from meridiano import config_base as config
 from meridiano import database
 from meridiano.utils import format_datetime, scrape_single_article_details, str_to_parser
 
-from meridiano.presentation_streamlit import articles
+from meridiano.presentation_streamlit import articles, data_collector, chat
 
 # --- Setup ---
 load_dotenv()
@@ -32,10 +32,16 @@ Desenvolver a pagina de scraping, onde o usuário poderá inserir uma URL e o si
 
 """
 
+
+@st.cache_resource
+def init_database_once():
+    database.init_db()
+
+
 def main():
     """Main Streamlit application."""
-    database.init_db()  # Ensure the database is initialized when the app starts
-    arg, feed_profile_name, effective_config = str_to_parser(feed="fake_news", scrape=False, process=False, generate=False, rate=False)
+    init_database_once()
+    arg, feed_profile_name, effective_config = str_to_parser(feed="brasil", scrape=False, process=False, generate=False, rate=False)
 
     st.session_state.arg = arg
     st.session_state.feed_profile_name = feed_profile_name
@@ -46,20 +52,16 @@ def main():
     
     with st.sidebar:
         st.header("Modulos")
-        mode = st.radio("Selecione o módulo:", ("Chatbot", "Artigos"))
-
-        st.divider()
-        
-        st.subheader("Configurações")
+        mode = st.radio("Selecione o módulo:", ["Coletor de Dados", "Chatbot", "Artigos"], index=1)
     
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    
 
-    if mode == "Chatbot":
-        if database.get_total_article_count() == 0:
-            st.write("Nenhum artigo encontrado na base de dados. Por favor, adicione artigos para que o chatbot possa utilizá-los como base de conhecimento.")
-        else:
-            st.write("Módulo de Chatbot em desenvolvimento. Em breve, você poderá interagir com nosso assistente de IA para obter análises e insights sobre as notícias processadas.")
+    if mode == "Coletor de Dados":
+        data_collector.show()
+    elif mode == "Chatbot":
+        chat.show()
     elif mode == "Artigos":
         articles.show()
     
