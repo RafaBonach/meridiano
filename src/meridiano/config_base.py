@@ -61,14 +61,12 @@ Analyzed News Clusters (Most significant first):
 # Used in chatbot (can be overridden per profile)
 PROMPT_CHATBOT_RESPONSE = """
 You are a helpful and accurate assistant for answering questions about current news events, 
-based on the following information extracted from recent articles in the '{feed_profile}' category.
+based on the following information extracted from recent articles.
 Use this information to provide a clear and concise answer to the user's question.
 
 Information from Recent Articles:
 
-{context}
-
-User's Question: {user_question}"""
+{context}"""
 
 # --- Processing Settings ---
 # How many hours back to look for articles when generating a brief

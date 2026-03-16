@@ -110,7 +110,5 @@ Se a pergunta não puder ser respondida com base nas informações fornecidas, e
 <context>
 {context}
 </context>
-
-Pergunta: {user_question}
                            
 """ + pt_br)
