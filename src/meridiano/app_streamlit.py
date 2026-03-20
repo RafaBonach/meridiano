@@ -41,7 +41,7 @@ def init_database_once():
 def main():
     """Main Streamlit application."""
     init_database_once()
-    arg, feed_profile_name, effective_config = str_to_parser(feed="brasil", scrape=False, process=False, generate=False, rate=False)
+    arg, feed_profile_name, effective_config = str_to_parser(**config.STREAMLIT_CONFIG)
 
     st.session_state.arg = arg
     st.session_state.feed_profile_name = feed_profile_name
