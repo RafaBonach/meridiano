@@ -24,10 +24,9 @@ def show():
 
         with st.chat_message("assistant"):
             with st.spinner("Processando..."):
-                response = st.session_state.rag_service.ask_question(prompt)
-                st.write(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
-                print(st.session_state.rag_service.qa_chain.get_prompts)
+                response = st.session_state.rag_service.answer_question(prompt)
+                st.write(response[-1].content)
+                st.session_state.messages.append({"role": "assistant", "content": response[-1].content})
 
     if st.button("🗑 Limpar Conversa"):
         st.session_state.messages = []

@@ -2,14 +2,15 @@
     Depois, basta realizar o processo de chunking e criar os embeddings, para depois alimentar a base de dados de vetores."""
 
 import os
+import json
 
-from langchain_ollama import OllamaLLM, OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings, ChatOllama
+from langchain.chat_models import init_chat_model
 from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
 from langchain_classic.text_splitter import RecursiveCharacterTextSplitter
 from langchain.agents import AgentState, create_agent
-from langchain_core.prompts import PromptTemplate
-from langchain.agents.middleware import dynamic_prompt, ModelRequest
+from langchain.tools import tool
 
 from meridiano.run_briefing import get_deepseek_embedding
 from meridiano import config_base as config  # Load base config first
@@ -38,7 +39,7 @@ class RAGService:
             chunk_overlap=CHUNK_OVERLAP
             )
        
-       self.llm = OllamaLLM(model=llm_model_name.removeprefix("ollama/"))
+       self.llm = ChatOllama(model=llm_model_name.removeprefix("ollama/"))
 
        self.prompt = None
 
@@ -47,21 +48,6 @@ class RAGService:
        self.documents = []
 
        self.qa_chain = None
-
-    @dynamic_prompt
-    def prompt_with_context(self, request: ModelRequest, state: AgentState) -> str:
-        """ Inject context into state messages """
-        last_query = request.state["messages"][-1].text
-        retrieved_docs = self.vector_store.similarity_search(last_query, k=5)
-
-        # Format retrieved documents into a single string to inject into the prompt
-        docs_content = "\n\n".join(doc.page_content for doc in retrieved_docs)
-
-        # Get the base prompt template and replace {feed_profile} if it exists
-        system_message = self.prompt.replace("{context}", docs_content)
-
-        return system_message
-
 
     # Carrega os parametros para dentro do nosso modelo de linguagem.
     def load_articles_feed(self, feed_profile, effective_config):
@@ -119,13 +105,22 @@ class RAGService:
         # Carrying the texts splitted in a vector store
         self.vector_store = FAISS.from_documents(texts, self.embedding)
 
+        @tool(response_format="content_and_artifact")
+        def retrieve_context(query: str):
+            """Retrieve information to help answer a query."""
+            retrieved_docs = self.vector_store.similarity_search(query, k=5)
+            serialized = "\n\n".join(
+                (f"Article ID: {doc.metadata['article_id']}\nContent: {doc.page_content}" for doc in retrieved_docs)
+            )
+            return serialized, retrieved_docs
+
         # Now, we need to create the prompt template for the chatbot
         # 1. We take the base prompt and replace the {feed_profile} variable with the actual feed profile name
         self.prompt = getattr(effective_config, "PROMPT_CHATBOT_RESPONSE", config.PROMPT_CHATBOT_RESPONSE)
 
         
         # 2. Now we create the prompt with the variables input
-        self.qa_chain = create_agent(self.llm, tools=[], middleware=[self.prompt_with_context], verbose=True)
+        self.qa_chain = create_agent(self.llm, tools=[retrieve_context], system_prompt=self.prompt)
 
         return True
 
