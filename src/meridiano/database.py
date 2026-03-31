@@ -236,11 +236,13 @@ def get_total_article_count(
 def add_article(
     url: str,
     title: str,
-    published_date: datetime,
-    feed_source: str,
     raw_content: str,
     feed_profile: str,
-    image_url: Optional[str] = None,
+    published_date: datetime | None = None,
+    feed_source: str = "",
+    image_url: Optional[str] | None = None,
+    author: Optional[str] = None,
+    veracity: Optional[int] = None
 ) -> Optional[int]:
     """Adds a new article with optional image URL."""
     with get_session() as session:
@@ -270,6 +272,8 @@ def add_article(
                 image_url=image_url,
                 feed_profile=feed_profile,
                 fetched_at=datetime.now(),
+                author=author,
+                veracity=veracity
             )
             session.add(article)
             session.commit()
@@ -407,17 +411,17 @@ def get_distinct_feed_profiles(table: str = "articles") -> List[str]:
         return list(result)
 
 """ Valores adicionados para analise de fake news """
-def salva_veracidade(article_id: int, feed_profile: str, veracidade_llm: int = None, veracidade_kmeans: int = None, veracidade_final: int = None) -> None:
+def salva_veracidade(article_id: int, feed_profile: str, veracity_llm: int = None, veracity_kmeans: int = None, veracity_final: int = None) -> None:
     """Salva a veracidade de um artigo no banco de dados."""
     with get_session() as session:
         statement = select(Article).where(Article.id == article_id and Article.feed_profile == feed_profile)
         article = session.exec(statement).first()
         if article:
-            if veracidade_llm is not None:
-                article.veracidade_llm = veracidade_llm
-            if veracidade_kmeans is not None:
-                article.veracidade_kmeans = veracidade_kmeans
-            if veracidade_final is not None:
-                article.veracidade = veracidade_final
+            if veracity_llm is not None:
+                article.veracity_llm = veracity_llm
+            if veracity_kmeans is not None:
+                article.veracity_kmeans = veracity_kmeans
+            if veracity_final is not None:
+                article.veracity = veracity_final
             session.add(article)
             session.commit()

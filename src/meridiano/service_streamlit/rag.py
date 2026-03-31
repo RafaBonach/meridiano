@@ -20,14 +20,16 @@ from meridiano.models import Article, get_session
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 
+# Peso usado no reranking de recuperação por veracidade.
+# Banco: 1 = verdadeiro, 0 = falso.
+VERACITY_WEIGHTS = {
+    0: 1.25,
+    1: 1.0,
+}
+
 client = {
     "api_base": os.getenv("LLM_API_BASE_URL"),
 }
-
-"""
-    Ajustar o processo de RAG para utilizar os artigos do banco de dados
-    Verificar se a função load_articles_feed está funcionando corretamente.
-"""
 
 # Verificar porque o ollama não está conseguindo acessar o modelo de embedding
 class RAGService:
@@ -49,25 +51,35 @@ class RAGService:
 
        self.qa_chain = None
 
+    @staticmethod
+    def _normalize_veracity(value):
+        try:
+            if value is None:
+                return None
+            numeric = int(value)
+            return numeric if numeric in (0, 1) else None
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _veracity_label(value):
+        labels = {
+            1: "verdadeiro",
+            0: "falso",
+            None: "desconhecido",
+        }
+        return labels.get(value, "desconhecido")
+
+    @staticmethod
+    def _veracity_weight(value):
+        normalized = RAGService._normalize_veracity(value)
+        return VERACITY_WEIGHTS.get(normalized, 1.0)
+
     # Carrega os parametros para dentro do nosso modelo de linguagem.
     def load_articles_feed(self, feed_profile, effective_config):
-        """
-        articles = database.get_all_articles(feed_profile=feed_profile)
-        chat_prompt = getattr(effective_config, "PROMPT_CHATBOT_RESPONSE", config.PROMPT_CHATBOT_RESPONSE)
-        chat_prompt = chat_prompt.replace("{feed_profile}", feed_profile) if "{feed_profile}" in chat_prompt else chat_prompt
-
-        if not articles:
-            print(f"No articles found for profile '{feed_profile}'.")
-            return False
-
-        # Preciso carregar várias urls para realizar o processo de chunking e criação de embeddings. O WebBaseLoader é a melhor opção para isso, pois ele é capaz de lidar com múltiplas URLs e extrair o conteúdo de forma eficiente.
-        urls = [article['url'] for article in articles]
-        loader = WebBaseLoader(web_paths=urls)
-        documents = loader.load()
-        """
 
         # Get articles *for check facts*
-        articles = database.get_articles_for_briefing(config.BRIEFING_ARTICLE_LOOKBACK_HOURS, feed_profile)
+        articles = database.get_unprocessed_articles(feed_profile, limit=1000)
 
         if not articles or len(articles) < config.MIN_ARTICLES_FOR_BRIEFING:
             print(
@@ -77,40 +89,62 @@ class RAGService:
             return False
         
         # Prepare data for splitting and embedding
-        article_ids = [a["id"] for a in articles]
-        summaries = [a["processed_content"] for a in articles]
-        embeddings = [json.loads(a["embedding"]) for a in articles if a["embedding"]]  # Load JSON string
-
-        if len(embeddings) != len(articles):
-            print("Warning: Some articles selected for briefing are missing embeddings. Proceeding with available ones.")
-            # Filter articles, summaries, ids to match embeddings
-            valid_indices = [i for i, a in enumerate(articles) if a["embedding"]]
-            articles = [articles[i] for i in valid_indices]
-            article_ids = [article_ids[i] for i in valid_indices]
-            summaries = [summaries[i] for i in valid_indices]
-            # embeddings are already filtered
-
-        if len(embeddings) < config.MIN_ARTICLES_FOR_BRIEFING:
-            print(
-                f"Not enough articles ({len(embeddings)}) with embeddings to cluster. "
-                f"Min required: {config.MIN_ARTICLES_FOR_BRIEFING}."
+        for article in articles:
+            if not article.get("raw_content"):
+                continue
+            
+            #load the article content in a document
+            document = Document(
+                page_content=article["raw_content"],
+                metadata={"article_id": article["id"], "veracity": article.get("veracity")},
             )
-            return False
+            self.documents.append(document)
 
-        self.documents = [Document(page_content=s, metadata={"article_id": aid}) for s, aid in zip(summaries, article_ids)]
+            # Split documents into chunks and create vector store
+            texts = self.text_splitter.split_documents(documents=document)
 
-        # Split documents into chunks and create vector store
-        texts = self.text_splitter.split_documents(documents=self.documents)
+            # Carrying the texts splitted in a vector store
+            self.vector_store = FAISS.from_documents(texts, self.embedding)
 
-        # Carrying the texts splitted in a vector store
-        self.vector_store = FAISS.from_documents(texts, self.embedding)
+            # Now, we need to save the vector store in the database.
+            if not self.vector_store:
+                print(f"Skipping article {article['id']} due to embedding error.")
+                continue  # Or store article without embedding if desired
 
+            database.update_article_processing(article["id"], article["raw_content"], self.vector_store)
+        
+        """ ---------------
+        Próximo passo, temos que fazer uma busca de similiridade por embedding.
+        O usuário fará uma pergunta e essa pergunta deverá ser convertida em embedding e comparada com os embeddings do banco de dados.
+        O resultado dessa busca de similaridade será reordenado por um peso de veracidade, onde os artigos classificados como falsos terão um peso menor e os classificados como verdadeiros terão um peso maior.
+        Finalmente, deve ser montado o contexto e elaborado o prompt para o modelo de linguagem.
+            ---------------"""
+        
         @tool(response_format="content_and_artifact")
         def retrieve_context(query: str):
             """Retrieve information to help answer a query."""
-            retrieved_docs = self.vector_store.similarity_search(query, k=5)
+            scored_docs = self.vector_store.similarity_search_with_score(query, k=20)
+            reranked_docs = []
+
+            for doc, distance in scored_docs:
+                veracity_value = self._normalize_veracity(doc.metadata.get("veracity"))
+                veracity_weight = self._veracity_weight(veracity_value)
+
+                # Em FAISS, menor distância representa maior similaridade.
+                similarity = 1.0 / (1.0 + float(distance))
+                weighted_score = similarity * veracity_weight
+                reranked_docs.append((weighted_score, doc))
+
+            reranked_docs.sort(key=lambda item: item[0], reverse=True)
+            retrieved_docs = [doc for _, doc in reranked_docs[:5]]
+
             serialized = "\n\n".join(
-                (f"Article ID: {doc.metadata['article_id']}\nContent: {doc.page_content}" for doc in retrieved_docs)
+                (
+                    f"Article ID: {doc.metadata['article_id']}\n"
+                    f"Veracity: {self._veracity_label(self._normalize_veracity(doc.metadata.get('veracity')))}\n"
+                    f"Content: {doc.page_content}"
+                    for doc in retrieved_docs
+                )
             )
             return serialized, retrieved_docs
 
@@ -118,7 +152,6 @@ class RAGService:
         # 1. We take the base prompt and replace the {feed_profile} variable with the actual feed profile name
         self.prompt = getattr(effective_config, "PROMPT_CHATBOT_RESPONSE", config.PROMPT_CHATBOT_RESPONSE)
 
-        
         # 2. Now we create the prompt with the variables input
         self.qa_chain = create_agent(self.llm, tools=[retrieve_context], system_prompt=self.prompt)
 

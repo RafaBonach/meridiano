@@ -42,6 +42,7 @@ class Article(SQLModel, table=True):
     url: str = Field(unique=True, index=True)
     title: Optional[str] = None
     published_date: Optional[datetime] = None
+    author: Optional[str]
     feed_source: Optional[str] = None
     fetched_at: datetime = Field(default_factory=datetime.now)
     raw_content: Optional[str] = None
@@ -54,9 +55,9 @@ class Article(SQLModel, table=True):
     feed_profile: str = Field(default="default", index=True)
 
     # --- Coluna fake news ---
-    veracidade: Optional[int] = None
-    veracidade_llm: Optional[int] = None
-    veracidade_kmeans: Optional[int] = None
+    veracity: Optional[int] = None
+    veracity_llm: Optional[int] = None
+    veracity_kmeans: Optional[int] = None
 
 
 class Brief(SQLModel, table=True):

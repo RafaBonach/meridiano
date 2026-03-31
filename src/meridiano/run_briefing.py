@@ -14,6 +14,7 @@ import numpy as np
 from dotenv import load_dotenv
 from sklearn.cluster import KMeans
 from sqlmodel import select
+import pandas as pd
 
 from meridiano import config_base as config  # Load base config first
 from meridiano import database
@@ -175,7 +176,7 @@ def scrape_articles(feed_profile, rss_feeds) -> bool:  # Added params
                 print("  No image found in RSS or OG tags.")
 
             article_id = database.add_article(
-                url, title, published_date, feed_source, raw_content, feed_profile, final_image_url
+                url, title, published_date, raw_content, feed_profile, feed_source, final_image_url
             )
             if article_id:
                 new_articles_count += 1
@@ -184,6 +185,45 @@ def scrape_articles(feed_profile, rss_feeds) -> bool:  # Added params
     print(f"--- Scraping Finished [{feed_profile}]. Added {new_articles_count} new articles. ---")
     return True
 
+def load_database() -> bool:
+    """ Loads the online Database to Train the RAG """
+    print("\n--- Starting Database Load ---")
+    url = "https://github.com/Gabriel-Lino-Garcia/FakeRecogna/raw/58f8f6ebd419970527875ba243c9c891781747cd/dataset/FakeRecogna.xlsx"
+    df = pd.read_excel(url)
+
+    # Processing the Dataframe
+    if df["Classe"].dtype != 'Int64' or df["Classe"].dtype != 'int':
+        df['Classe'] = df['Classe'].astype('Int64') # Ensure 'Classe' is integer type, allowing for NaN if needed
+    
+    if df['Titulo'].isnull().any():
+        df = df.dropna(subset=['Titulo'])
+
+    if df.columns.str.contains('Subtitulo').any():
+        df = df.drop(columns=['Subtitulo'])
+
+    feed_profile = 'fake_news'
+    for index, row in df.iterrows():
+        title = row['Titulo']
+        raw_content = row['Noticia']
+        category = row['Categoria']
+        date = row['Data']
+        author = row['Autor']
+        url = row['URL']
+        classification = row['Classe']
+
+        if not url and not raw_content:
+            continue
+
+        # --- Check if article exists ---
+        with get_session() as session:
+            exists = session.exec(select(Article).where(Article.url == url)).first()
+        if exists:
+            continue
+        # --- End Check ---
+
+        article_id = database.add_article(url=url, title=title, published_date=date, raw_content=raw_content, feed_profile=feed_profile, author=author, veracity=classification)
+
+    return True
 
 def process_articles(feed_profile, effective_config, limit=1000):
     """Processes unprocessed articles: summarizes and generates embeddings."""
@@ -483,6 +523,10 @@ def extern_execution(args: argparse.Namespace, feed_profile_name: str, effective
                 generate_brief(feed_profile_name, effective_config)
             else:
                 print(f"Cannot run generate stage: No RSS_FEEDS found for profile '{feed_profile_name}'.")
+
+        if args.load and feed_profile_name == 'fake_news':  # Only allow loading for the specific fake news profile
+            print(f"\n>>> Running ONLY Load Database stage [{feed_profile_name}] <<<")
+            state = load_database()
 
     print(f"\nRun Finished [{feed_profile_name}] - {datetime.now()}")
     return state
