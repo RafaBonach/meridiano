@@ -187,6 +187,7 @@ def str_to_parser(
     generate: bool,
     rate: bool,
     run_all: bool = False,
+    load: bool = False,
     model: str | None = None,
     limit: int = 1000,
 ):
@@ -215,7 +216,9 @@ def str_to_parser(
         run_all=bool(run_all),
         model=model,
         limit=int(limit),
+        load=bool(load),
     )
+
 
     feed_config = None
     rss_feeds = None

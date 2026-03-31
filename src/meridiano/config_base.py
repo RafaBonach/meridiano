@@ -107,4 +107,5 @@ STREAMLIT_CONFIG = {
     "run_all": False,
     "model": None,
     "limit": 1000,
+    "load": False,
 }
