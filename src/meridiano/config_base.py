@@ -9,11 +9,9 @@ load_dotenv()
 
 # Used in process_articles (operates globally, so uses default)
 PROMPT_ARTICLE_SUMMARY = """
-Summarize the key points of this news article objectively in 2-4 sentences.
-Identify the main topics covered.
-
-Article:
-{article_content}
+ Classify the following statement as 'False ' or 'True ':
+ \n Message : {question}.\n 
+ Return only the Classification in a single word ( true / false ) without any further explanation 
 """
 
 # Used in rate_articles (operates globally, so uses default)
@@ -99,7 +97,7 @@ FLASK_ENV = os.getenv("FLASK_ENV", "development")
 
 # Streamlit configuration
 STREAMLIT_CONFIG = {
-    "feed": "brasil",
+    "feed": "fake_news",
     "scrape": False,
     "process": False,
     "generate": False,

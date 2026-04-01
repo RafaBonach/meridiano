@@ -2,20 +2,20 @@
     Depois, basta realizar o processo de chunking e criar os embeddings, para depois alimentar a base de dados de vetores."""
 
 import os
-import json
+import time
+
+import litellm
 
 from langchain_ollama import OllamaEmbeddings, ChatOllama
 from langchain.chat_models import init_chat_model
 from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
 from langchain_classic.text_splitter import RecursiveCharacterTextSplitter
-from langchain.agents import AgentState, create_agent
+from langchain.agents import create_agent
 from langchain.tools import tool
 
-from meridiano.run_briefing import get_deepseek_embedding
 from meridiano import config_base as config  # Load base config first
 from meridiano import database
-from meridiano.models import Article, get_session
 
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
@@ -31,7 +31,13 @@ client = {
     "api_base": os.getenv("LLM_API_BASE_URL"),
 }
 
-# Verificar porque o ollama não está conseguindo acessar o modelo de embedding
+embedding_client = {
+    "api_base": os.getenv("EMBEDDING_API_BASE_URL"),
+}
+
+""" -----------
+Desatualizado
+    ----------- 
 class RAGService:
     def __init__(self, embedding_model_name=config.EMBEDDING_MODEL, llm_model_name=config.LLM_CHAT_MODEL):
        self.embedding = OllamaEmbeddings(model=embedding_model_name.removeprefix("ollama/"))
@@ -113,16 +119,15 @@ class RAGService:
 
             database.update_article_processing(article["id"], article["raw_content"], self.vector_store)
         
-        """ ---------------
-        Próximo passo, temos que fazer uma busca de similiridade por embedding.
-        O usuário fará uma pergunta e essa pergunta deverá ser convertida em embedding e comparada com os embeddings do banco de dados.
-        O resultado dessa busca de similaridade será reordenado por um peso de veracidade, onde os artigos classificados como falsos terão um peso menor e os classificados como verdadeiros terão um peso maior.
-        Finalmente, deve ser montado o contexto e elaborado o prompt para o modelo de linguagem.
-            ---------------"""
+        # ---------------
+        # Próximo passo, temos que fazer uma busca de similiridade por embedding.
+        # O usuário fará uma pergunta e essa pergunta deverá ser convertida em embedding e comparada com os embeddings do banco de dados.
+        # O resultado dessa busca de similaridade será reordenado por um peso de veracidade, onde os artigos classificados como falsos terão um peso menor e os classificados como verdadeiros terão um peso maior.
+        # Finalmente, deve ser montado o contexto e elaborado o prompt para o modelo de linguagem.
+        # ---------------
         
         @tool(response_format="content_and_artifact")
         def retrieve_context(query: str):
-            """Retrieve information to help answer a query."""
             scored_docs = self.vector_store.similarity_search_with_score(query, k=20)
             reranked_docs = []
 
@@ -157,6 +162,7 @@ class RAGService:
 
         return True
 
+    
     def answer_question(self, user_question):
         # Faz a pergunta para o modelo de linguagem
         if not self.qa_chain:
@@ -172,3 +178,63 @@ class RAGService:
         except Exception as e:
             print(f"Error during QA chain execution: {e}")
             return f"Erro ao processar a pergunta: {str(e)}"
+
+            """
+
+class LLMService:
+    def __init__(self, effective_config):
+        self.eff_conf = effective_config
+        self.chat_model = getattr(effective_config, "LLM_CHAT_MODEL", "deepseek/deepseek-chat")
+        self.prompt_template = getattr(effective_config, "PROMPT_ARTICLE_SUMMARY", config.PROMPT_ARTICLE_SUMMARY)
+
+    def call_llm_chat(self, prompt, model=config.LLM_CHAT_MODEL, system_prompt=None):
+        """Calls the LLM API (Deepseek, Ollama, etc)."""
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+
+        messages.append({"role": "user", "content": prompt})
+
+        completion_kwargs = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": 2048,
+            "temperature": 0.7,
+        }
+
+        # Only pass api_base if it's set and we are NOT using Ollama (which has its own default/env var)
+        # or if we want to support a custom OLLAMA_API_BASE env var handled by litellm.
+        # If the model is 'ollama/...', litellm looks for OLLAMA_API_BASE or defaults to localhost:11434.
+        # We don't want to pass the DeepSeek/OpenAI API base URL to Ollama.
+        if not str(model).startswith("ollama"):
+            if client["api_base"]:
+                completion_kwargs["api_base"] = client["api_base"]
+        else:
+            # Explicitly pass OLLAMA_API_BASE if set, to ensure litellm uses it
+            ollama_base = os.getenv("OLLAMA_API_BASE")
+            if ollama_base:
+                completion_kwargs["api_base"] = ollama_base
+                # print(f"DEBUG: Using Ollama API Base: {ollama_base}")
+
+        try:
+            response = litellm.completion(**completion_kwargs)
+            return response["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            print(f"Error calling Deepseek Chat API: {e}")
+            # Implement retry logic or better error handling here if needed
+            time.sleep(1)  # Basic backoff
+            return None
+    
+    def answer_question(self, user_question):
+        #1. Format the potentially profile-specific message prompt
+        prompt = self.prompt_template.format(
+            question=user_question
+        )
+        answer = self.call_llm_chat(prompt, model=self.chat_model)
+
+        if not answer:
+            print(f"Skipping message due to answer error.")
+            return "Descupe, parece que houve um erro ao tentar processa a sua mensagem."
+        
+        return answer
+        

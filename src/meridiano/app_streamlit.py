@@ -22,7 +22,7 @@ from meridiano import config_base as config
 from meridiano import database
 from meridiano.utils import format_datetime, scrape_single_article_details, str_to_parser
 
-from meridiano.presentation_streamlit import articles, data_collector, chat
+from meridiano.presentation_streamlit import chat
 
 # --- Setup ---
 load_dotenv()
@@ -52,20 +52,18 @@ def main():
     
     with st.sidebar:
         st.header("Modulos")
-        mode = st.radio("Selecione o módulo:", ["Coletor de Dados", "Chatbot", "Artigos"], index=1)
+        mode = st.radio("Selecione o módulo:", ["Coletor de Dados", "Chatbot", "Analise de Desempenho"], index=1)
     
     if "messages" not in st.session_state:
         st.session_state.messages = []
     
-
     if mode == "Coletor de Dados":
-        data_collector.show()
+        st.write("Estamos desenvolvendo")
     elif mode == "Chatbot":
         chat.show()
-    elif mode == "Artigos":
-        articles.show()
-    
-
+    elif mode == "Analise de Desempenho":
+        st.write("Estamos desenvolvendo")
+        
 
 
 if __name__ == "__main__":
