@@ -83,6 +83,22 @@ class Brief(SQLModel, table=True):
     contributing_article_ids: Optional[str] = None  # JSON string
     feed_profile: str = Field(default="default", index=True)
 
+class Message(SQLModel, table=True):
+    """Message model representing chat messages in the database."""
+
+    __tablename__ = "messages"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    url: str = Field(unique=True, index=True)
+    title: Optional[str] = None
+    raw_content: Optional[str] = None
+    category: Optional[str] = None
+    published_date: Optional[datetime] = None
+    author: Optional[str] = None
+    veracity: Optional[int] = None
+    llm_answer: Optional[str] = None
+    embedding: Optional[str] = None  # JSON string
+    
 
 # Database engine and session management
 engine = create_engine(config.DATABASE_URL, echo=False)

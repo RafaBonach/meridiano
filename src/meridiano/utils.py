@@ -158,28 +158,6 @@ def scrape_single_article_details(article_url):
 
     return {"title": fetched_title, "raw_content": raw_content, "image_url": final_image_url, "error": error_message}
 
-def agrupate_context_and_prompt(prompt: str, context="/home/rafael/Projetos/meridiano/src/meridiano/rag_training_data.json"):
-    if "{database_context}" not in prompt:
-        return prompt
-    
-    
-    elif "{database_context}" in prompt and not os.path.exists(context):
-        prompt = prompt.replace("{database_context}", "Don't have any context available. Disconsider this information.")
-        print("Skipping context aggregation for prompt: 'rag_training_data.json' not found.")
-        return prompt
-    
-    with open(context,"r") as f:
-        data = json.load(f)
-
-    context = "\n\n".join(
-        f"topico: {item['topico']}\n\nexplicação: {item['explicação']}\n\ndesinformativo: {item['desinformativo']}\n\ninformativo: {item['informativo']}\n" for item in data
-    )
-
-    prompt = prompt.replace("{database_context}", context)
-    
-    return prompt
-
-
 def str_to_parser(
     feed: str,
     scrape: bool,
@@ -271,3 +249,29 @@ def cria_arquivo_veracidade(artigos: dict) -> None:
         f.write("id,veracidade_final,veracidade_llm,veracidade_kmeans,url,conteudo\n")
         for id, article in artigos.items():
             f.write(f"{id},{article['veracidade']},{article['veracidade_llm']},{article['veracidade_kmeans']},{article['url']},\"{article['raw_content'].replace('\"', '\"\"')}...\"\n")
+
+def generate_prompt(prompt: str, model_name: str, question: str):
+    instruction_prompt = prompt.replace("{{message}}", question)
+
+    default_parameters = {
+        "temperature": 0.7,
+        "return_full_text": False,
+    }
+
+    switch_case = {
+        "deepseek": {
+            "message": [
+                {
+                    "role": "user",
+                    "content": f"{instruction_prompt}"
+                }
+            ],
+            "max_tokens": 1024
+        }
+    }
+
+    if model_name not in switch_case:
+        e = "Model " + model_name + " not found ."
+        raise ValueError(e)
+    return switch_case[model_name]
+

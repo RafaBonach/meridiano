@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import and_, asc, desc, func, or_, select
 
 from . import config_base as config
-from .models import Article, Brief, get_session
+from .models import Article, Brief, Message, get_session
 from .models import init_db as model_init_db
 
 logger = logging.getLogger(__name__)
@@ -113,6 +113,23 @@ def _brief_to_dict(brief: Brief) -> Dict[str, Any]:
         }
     )
 
+def _message_to_dict(message: Message) -> Dict[str, Any]:
+    """Convert Message model to dictionary for compatibility with existing code."""
+    if not message:
+        return None
+
+    return message.model_dump(
+        include={
+            "id",
+            "url",
+            "title",
+            "raw_content",
+            "category",
+            "published_date",
+            "author",
+            "veracity",
+        }
+    )
 
 def _build_article_filters(
     start_date: Optional[date] = None,
@@ -130,6 +147,7 @@ def _build_article_filters(
         filters.append(Article.feed_profile == feed_profile)
 
     return filters
+
 
 
 def get_all_articles(
@@ -236,13 +254,11 @@ def get_total_article_count(
 def add_article(
     url: str,
     title: str,
+    published_date: datetime,
     raw_content: str,
     feed_profile: str,
-    published_date: datetime | None = None,
-    feed_source: str = "",
-    image_url: Optional[str] | None = None,
-    author: Optional[str] = None,
-    veracity: Optional[int] = None
+    feed_source: str,
+    image_url: Optional[str] | None = None
 ) -> Optional[int]:
     """Adds a new article with optional image URL."""
     with get_session() as session:
@@ -271,9 +287,7 @@ def add_article(
                 raw_content=raw_content,
                 image_url=image_url,
                 feed_profile=feed_profile,
-                fetched_at=datetime.now(),
-                author=author,
-                veracity=veracity
+                fetched_at=datetime.now()
             )
             session.add(article)
             session.commit()
@@ -409,6 +423,65 @@ def get_distinct_feed_profiles(table: str = "articles") -> List[str]:
             result = session.exec(statement).all()
 
         return list(result)
+    
+
+def get_all_messages() -> List[Dict[str, Any]]:
+    """Fetches all messages from the database."""
+    with get_session() as session:
+        # Start with base query
+        statement = select(Message).order_by(desc(Message.id))
+
+        messages = session.exec(statement).all()
+        return [_message_to_dict(message) for message in messages]
+    
+def get_total_message_count() -> int:
+    """Returns total count of messages."""
+    with get_session() as session:
+        # Start with base query
+        statement = select(func.count(Message.id))
+
+        return session.exec(statement).one()
+    
+def add_message(
+    url: str,
+    title: str,
+    raw_content: str,
+    category: Optional[str] | None = None,
+    published_date: Optional[datetime] | None = None,
+    author: Optional[str] | None = None,
+    veracity: Optional[int] | None = None
+) -> Optional[int]:
+    """Adds a new message to the database."""
+    with get_session() as session:
+        try:
+            message = Message(
+                url=url,
+                title=title,
+                raw_content=raw_content,
+                category=category,
+                published_date=published_date,
+                author=author,
+                veracity=veracity
+            )
+            session.add(message)
+            session.commit()
+            session.refresh(message)  # Get the ID
+            print(f"Added message: {title}")
+            return message.id
+        except IntegrityError:
+            session.rollback()
+            return None
+        
+def update_messages_processing(message_id: int, processed_content: str = "", embedding: Optional[List[float]] = None) -> None:
+    """Updates an message with its answer, embedding, and processed timestamp."""
+    with get_session() as session:
+        statement = select(Message).where(Message.id == message_id)
+        message = session.exec(statement).first()
+        if message:
+            message.llm_answer = processed_content
+            message.embedding = embedding
+            session.add(message)
+            session.commit()
 
 """ Valores adicionados para analise de fake news """
 def salva_veracidade(article_id: int, feed_profile: str, veracity_llm: int = None, veracity_kmeans: int = None, veracity_final: int = None) -> None:

@@ -6,9 +6,10 @@ pt_br = " Responda em português brasileiro."
 """ A ideia aqui é pegar uma notícia e transformá-la em uma manchete.
     Essa manchete deve apresentar todos os pontos principais da notícia."""
 PROMPT_ARTICLE_SUMMARY = (
-    "Analise o artigo a seguir e resuma o conteúdo em uma manchete clara e concisa, que capture os pontos principais e o tom do artigo. "
-    "A manchete deve ser neutra, apresentando exclusivamente o que é aprentado no artigo, sem fazer juizo de valores ou adicionar informações externas."
-    "\n\nArtigo:\n{article_content}." + pt_br
+    "Classifique a seguinte declaração como 'Falsa' ou 'Verdadeira':"
+    "\n Mensagem: {question}.\n"
+    "Retorne apenas a Classificação em uma única palavra (verdadeira / falsa) "
+    "sem qualquer indiciação adicional"
 )
 
 

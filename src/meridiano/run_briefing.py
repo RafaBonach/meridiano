@@ -21,8 +21,6 @@ from meridiano import database
 from meridiano.models import Article, get_session
 from meridiano.utils import fetch_article_content_and_og_image
 
-from meridiano.utils import agrupate_context_and_prompt
-
 # --- Setup ---
 load_dotenv()
 
@@ -221,7 +219,7 @@ def load_database() -> bool:
             continue
         # --- End Check ---
 
-        article_id = database.add_article(url=url, title=title, published_date=date, raw_content=raw_content, feed_profile=feed_profile, author=author, veracity=classification)
+        article_id = database.add_message(url, title, raw_content, category, date, author, classification)
 
     return True
 
@@ -229,47 +227,43 @@ def process_articles(feed_profile, effective_config, limit=1000):
     """Processes unprocessed articles: summarizes and generates embeddings."""
     print("\n--- Starting Article Processing ---")
     chat_model = getattr(effective_config, "LLM_CHAT_MODEL", "deepseek/deepseek-chat")
-    summary_prompt_template = getattr(effective_config, "PROMPT_ARTICLE_SUMMARY", config.PROMPT_ARTICLE_SUMMARY)
-
-    # If exists an external context, we can use it to enhance the prompt.
-    summary_prompt_template = agrupate_context_and_prompt(summary_prompt_template)
-    print(summary_prompt_template)
+    prompt_template = getattr(effective_config, "PROMPT_ARTICLE_SUMMARY", config.PROMPT_ARTICLE_SUMMARY)
         
-    unprocessed = database.get_unprocessed_articles(feed_profile, limit)
+    unprocessed = database.get_all_messages
     processed_count = 0
     if not unprocessed:
         print("No new articles to process.")
         return
 
     print(f"Found {len(unprocessed)} articles to process (Limit: {limit}).")
-    for article in unprocessed:
-        print(f"Processing article ID: {article['id']} - {article['url'][:50]}...")
+    for message in unprocessed:
+        print(f"Processing article ID: {message['id']} - {message['url'][:50]}...")
 
         # 1. Summarize using Deepseek Chat
-        # Format the potentially profile-specific summary prompt
-        summary_prompt = summary_prompt_template.format(
-            article_content=article["raw_content"][:4000]  # Limit context
+        # Format the potentially profile-specific message prompt
+        prompt = prompt_template.format(
+            article_content=message["raw_content"][:4000]  # Limit context
         )
-        summary = call_deepseek_chat(summary_prompt, model=chat_model)
+        answer = call_deepseek_chat(prompt, model=chat_model)
 
-        if not summary:
-            print(f"Skipping article {article['id']} due to summarization error.")
+        if not answer:
+            print(f"Skipping article {message['id']} due to summarization error.")
             continue
 
-        print(f"Article summary is: {summary}")
+        print(f"Article summary is: {answer}")
 
         # 2. Generate Embedding using Deepseek (or alternative)
         # Use summary for embedding to focus on core topics and save tokens/time
-        embedding = get_deepseek_embedding(summary)
+        embedding = get_deepseek_embedding(answer)
 
         if not embedding:
-            print(f"Skipping article {article['id']} due to embedding error.")
+            print(f"Skipping article {message['id']} due to embedding error.")
             continue  # Or store article without embedding if desired
 
         # 3. Update Database
-        database.update_article_processing(article["id"], summary, embedding)
+        database.update_messages_processing(message["id"], answer, embedding)
         processed_count += 1
-        print(f"Successfully processed article ID: {article['id']}")
+        print(f"Successfully processed article ID: {message['id']}")
         time.sleep(1)  # Avoid hitting API rate limits
 
     print(f"--- Processing Finished. Processed {processed_count} articles. ---")
