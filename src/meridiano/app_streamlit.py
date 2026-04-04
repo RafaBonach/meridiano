@@ -9,28 +9,17 @@
 
     Essa pagina deve ser baseada no modelo flask desenvolvido em /home/rafael/Projetos/meridiano/src/meridiano/app.py
 """
-import json
-import math
-from datetime import date, datetime, timedelta
-
-import os
-import markdown
 import streamlit as st
 from dotenv import load_dotenv
 
 from meridiano import config_base as config
 from meridiano import database
-from meridiano.utils import format_datetime, scrape_single_article_details, str_to_parser
+from meridiano.utils import str_to_parser
 
 from meridiano.presentation_streamlit import chat
 
 # --- Setup ---
 load_dotenv()
-
-"""
-Desenvolver a pagina de scraping, onde o usuário poderá inserir uma URL e o sistema irá realizar o processo de scraping
-
-"""
 
 
 @st.cache_resource

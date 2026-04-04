@@ -227,7 +227,7 @@ def process_articles(feed_profile, effective_config, limit=1000):
     """Processes unprocessed articles: summarizes and generates embeddings."""
     print("\n--- Starting Article Processing ---")
     chat_model = getattr(effective_config, "LLM_CHAT_MODEL", "deepseek/deepseek-chat")
-    prompt_template = getattr(effective_config, "PROMPT_ARTICLE_SUMMARY", config.PROMPT_ARTICLE_SUMMARY)
+    prompt_template = getattr(effective_config, "PROMPT_BY_CATEGORY", config.PROMPT_BY_CATEGORY)
         
     unprocessed = database.get_all_messages
     processed_count = 0

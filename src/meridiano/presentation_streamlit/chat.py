@@ -1,6 +1,5 @@
 import streamlit as st
 from meridiano.service_streamlit.rag import LLMService
-from meridiano import database
 
 def show():
     st.header("💬 Chatbot")

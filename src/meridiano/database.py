@@ -21,11 +21,6 @@ logger = logging.getLogger(__name__)
 ARTICLES_PER_PAGE_DEFAULT = 25
 
 
-def get_db_connection():
-    """Returns a new database session (replaces SQLite connection)"""
-    return get_session()
-
-
 def init_db():
     """Initialize the database - create all tables"""
 
@@ -64,7 +59,7 @@ def update_article_rating(article_id: int, impact_score: int) -> None:
             session.add(article)
             session.commit()
 
-
+# Delete?
 def get_article_by_id(article_id: int) -> Optional[Dict[str, Any]]:
     """Retrieves all data for a specific article by its ID."""
     with get_session() as session:
@@ -149,7 +144,7 @@ def _build_article_filters(
     return filters
 
 
-
+# Delete?
 def get_all_articles(
     page: int = 1,
     per_page: int = ARTICLES_PER_PAGE_DEFAULT,
@@ -212,7 +207,7 @@ def get_all_articles(
         articles = session.exec(statement).all()
         return [_article_to_dict(article) for article in articles]
 
-
+# Delete?
 def get_total_article_count(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
@@ -481,20 +476,4 @@ def update_messages_processing(message_id: int, processed_content: str = "", emb
             message.llm_answer = processed_content
             message.embedding = embedding
             session.add(message)
-            session.commit()
-
-""" Valores adicionados para analise de fake news """
-def salva_veracidade(article_id: int, feed_profile: str, veracity_llm: int = None, veracity_kmeans: int = None, veracity_final: int = None) -> None:
-    """Salva a veracidade de um artigo no banco de dados."""
-    with get_session() as session:
-        statement = select(Article).where(Article.id == article_id and Article.feed_profile == feed_profile)
-        article = session.exec(statement).first()
-        if article:
-            if veracity_llm is not None:
-                article.veracity_llm = veracity_llm
-            if veracity_kmeans is not None:
-                article.veracity_kmeans = veracity_kmeans
-            if veracity_final is not None:
-                article.veracity = veracity_final
-            session.add(article)
             session.commit()

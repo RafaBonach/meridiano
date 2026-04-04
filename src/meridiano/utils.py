@@ -1,8 +1,6 @@
 import argparse
 import importlib
 import logging
-import os
-import json
 from datetime import datetime
 from urllib.parse import urljoin
 
@@ -240,38 +238,3 @@ def str_to_parser(
         effective_config.LLM_CHAT_MODEL = args.model
 
     return args, feed_profile_name, effective_config
-
-
-""" --- Minhas adições --- """
-""" Criador de database """
-def cria_arquivo_veracidade(artigos: dict) -> None:
-    with open("veracidade_discrepancias.csv", "w") as f:
-        f.write("id,veracidade_final,veracidade_llm,veracidade_kmeans,url,conteudo\n")
-        for id, article in artigos.items():
-            f.write(f"{id},{article['veracidade']},{article['veracidade_llm']},{article['veracidade_kmeans']},{article['url']},\"{article['raw_content'].replace('\"', '\"\"')}...\"\n")
-
-def generate_prompt(prompt: str, model_name: str, question: str):
-    instruction_prompt = prompt.replace("{{message}}", question)
-
-    default_parameters = {
-        "temperature": 0.7,
-        "return_full_text": False,
-    }
-
-    switch_case = {
-        "deepseek": {
-            "message": [
-                {
-                    "role": "user",
-                    "content": f"{instruction_prompt}"
-                }
-            ],
-            "max_tokens": 1024
-        }
-    }
-
-    if model_name not in switch_case:
-        e = "Model " + model_name + " not found ."
-        raise ValueError(e)
-    return switch_case[model_name]
-

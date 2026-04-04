@@ -8,11 +8,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Used in process_articles (operates globally, so uses default)
-PROMPT_ARTICLE_SUMMARY = """
- Classify the following statement as 'False ' or 'True ':
- \n Message : {question}.\n 
- Return only the Classification in a single word ( true / false ) without any further explanation 
-"""
+PROMPT_BY_CATEGORY = {
+    "zero-shot": """Classify the following statement as 'False ' or 'True ':
+    \n Message : {message}.\n Return only the Classification in a single word ( true / false ) 
+    without any further explanation :"""
+}
 
 # Used in rate_articles (operates globally, so uses default)
 PROMPT_IMPACT_RATING = """
